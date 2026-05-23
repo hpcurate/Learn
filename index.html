@@ -298,11 +298,12 @@
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/zstd-codec@0.1.5/dist/zstd-codec.js"></script>
   <script>
     // ════════════════════════════════════════════════════════════════════
     //  IndexedDB wrapper
     // ════════════════════════════════════════════════════════════════════
-    const DB_NAME='learn_v1', DB_VER=1;
+    const DB_NAME='learn_v1', DB_VER=2;
     let _db;
     function db() {
       if(_db) return Promise.resolve(_db);
@@ -316,6 +317,7 @@
             s.createIndex('deck','deckId',{unique:false});
           }
           if(!d.objectStoreNames.contains('media')) d.createObjectStore('media',{keyPath:'key'});
+          if(!d.objectStoreNames.contains('sources')) d.createObjectStore('sources',{keyPath:'deckId'});
         };
         r.onsuccess=()=>{_db=r.result; res(_db);};
         r.onerror=()=>rej(r.error);
@@ -597,6 +599,10 @@
         await put('decks', deck);
         await bulkPut('cards', cards);
 
+        // keep original .apkg so we can repackage on export
+        try { await put('sources', { deckId, blob: new Blob([buf]) }); }
+        catch(e) { console.warn('Could not store source apkg:', e); }
+
         // store media (skip very large files >5MB each)
         for(const [num, name] of Object.entries(mediaMap)) {
           const mf=zip.file(num);
@@ -688,6 +694,7 @@
       const media = await getAll('media');
       const prefix = currentDeckId+'/';
       for(const m of media) if(m.key.startsWith(prefix)) await del1('media', m.key);
+      try { await del1('sources', currentDeckId); } catch(e) {}
       await del1('decks', currentDeckId);
       currentDeckId=null;
       toast('Deck deleted');
@@ -965,11 +972,100 @@
                    `learn-${slug(d.name)}-${Date.now()}.json`, 'application/json');
       toast('Progress exported','ok');
     }
+    let _zstdSimple=null;
+    function getZstdEncoder() {
+      if(_zstdSimple) return Promise.resolve(_zstdSimple);
+      return new Promise((resolve, reject)=>{
+        if(typeof ZstdCodec==='undefined') {
+          reject(new Error('zstd encoder failed to load (check connection)'));
+          return;
+        }
+        ZstdCodec.run(zstd=>{ _zstdSimple=new zstd.Simple(); resolve(_zstdSimple); });
+      });
+    }
+
     async function exportApkg() {
-      // Honest limitation: we don't keep the original SQLite, so we can't perfectly
-      // recreate an .apkg. We export the JSON progress instead, with a note.
-      toast('Exporting JSON — full .apkg round-trip not supported yet','');
-      await exportProgress();
+      if(!currentDeckId) return;
+      const src = await get1('sources', currentDeckId);
+      if(!src || !src.blob) {
+        toast('Original file not stored — re-import this deck to enable .apkg export','err');
+        return;
+      }
+      try {
+        await ensureSQL();
+        const d = await get1('decks', currentDeckId);
+        const cards = await getByIndex('cards','deck', currentDeckId);
+
+        const zip = await JSZip.loadAsync(src.blob);
+        let dbName, needsZstd=false;
+        if(zip.file('collection.anki21b')) { dbName='collection.anki21b'; needsZstd=true; }
+        else if(zip.file('collection.anki21')) dbName='collection.anki21';
+        else if(zip.file('collection.anki2'))  dbName='collection.anki2';
+        else throw new Error('Source .apkg has no collection database');
+
+        let dbBuf = await zip.file(dbName).async('uint8array');
+        if(needsZstd) {
+          if(typeof fzstd==='undefined') throw new Error('zstd decoder not loaded');
+          dbBuf = fzstd.decompress(dbBuf);
+        }
+
+        const adb = new SQL.Database(dbBuf);
+
+        // collection creation time — review-state "due" is days since crt
+        let crt = Math.floor(Date.now()/1000) - 86400;
+        try {
+          const r = adb.exec("SELECT crt FROM col LIMIT 1");
+          if(r[0] && r[0].values[0]) crt = Number(r[0].values[0][0]);
+        } catch(e) {}
+
+        const stmt = adb.prepare(
+          "UPDATE cards SET type=?, queue=?, due=?, ivl=?, factor=?, reps=?, lapses=?, mod=?, usn=-1 WHERE id=?"
+        );
+        const nowSec = Math.floor(Date.now()/1000);
+        let updated = 0;
+        for(const c of cards) {
+          const ankiId = Number(c.ankiId);
+          if(!ankiId) continue;
+          let type, queue, due, ivl;
+          if(c.state==='new') {
+            type=0; queue=0; due=0; ivl=0;
+          } else if(c.state==='learning') {
+            type=1; queue=1;
+            due=Math.floor((c.due||Date.now())/1000);
+            ivl=0;
+          } else {
+            type=2; queue=2;
+            due=Math.floor(((c.due||Date.now())/1000 - crt)/86400);
+            ivl=Math.max(1, Math.round(c.interval||1));
+          }
+          const factor=Math.round((c.ease||2.5)*1000);
+          stmt.run([type, queue, due, ivl, factor, c.reps||0, c.lapses||0, nowSec, ankiId]);
+          updated++;
+        }
+        stmt.free();
+
+        try { adb.run("UPDATE col SET mod=?, scm=? WHERE 1", [nowSec*1000, nowSec*1000]); } catch(e) {}
+
+        let outBuf = adb.export();
+        adb.close();
+
+        if(needsZstd) {
+          const enc = await getZstdEncoder();
+          outBuf = enc.compress(outBuf);
+        }
+        zip.file(dbName, outBuf);
+
+        const blob = await zip.generateAsync({type:'blob', compression:'STORE'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${slug(d.name)}-${Date.now()}.apkg`;
+        a.click();
+        setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+        toast(`Exported ${updated} card${updated===1?'':'s'} as .apkg`, 'ok');
+      } catch(err) {
+        console.error(err);
+        toast(err.message || 'Export failed', 'err');
+      }
     }
     function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'deck'; }
     function downloadFile(content, filename, mime) {
@@ -999,6 +1095,7 @@
       const decks=await getAll('decks');
       for(const d of decks) {
         await delByIndex('cards','deck',d.id);
+        try { await del1('sources', d.id); } catch(e) {}
         await del1('decks',d.id);
       }
       const media=await getAll('media');
