@@ -174,6 +174,28 @@
     .toast.err{border-color:var(--re);color:var(--re)}
     .toast.ok{border-color:var(--gr);color:var(--gr)}
 
+    /* scoreboard */
+    .score-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:6px}
+    .score-cell{background:var(--s1);border:1px solid var(--bd);border-radius:3px;padding:14px 4px;text-align:center}
+    .score-n{font:700 22px/1 var(--mono);margin-bottom:6px;color:var(--tx)}
+    .score-l{font:400 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mu)}
+    .sc-acq .score-n{color:var(--gr)} .sc-acq{border-color:rgba(92,219,125,.4)}
+    .sc-alm .score-n{color:var(--y)}  .sc-alm{border-color:rgba(167,139,250,.4)}
+    .sc-shk .score-n{color:var(--or)} .sc-shk{border-color:rgba(224,160,96,.4)}
+    .sc-rev .score-n{color:var(--re)} .sc-rev{border-color:rgba(224,96,96,.4)}
+
+    .needs-work-list{display:flex;flex-direction:column;gap:5px}
+    .nw-item{background:var(--s1);border:1px solid var(--bd);border-radius:3px;padding:11px 13px;
+             display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+    .nw-text{font:400 12px/1.4 var(--mono);color:var(--tx);
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .nw-tag{font:700 9px/1 var(--head);letter-spacing:.1em;text-transform:uppercase;padding:4px 7px;border-radius:2px}
+    .nw-tag.rev{color:var(--re);background:var(--rd)}
+    .nw-tag.shk{color:var(--or);background:var(--od)}
+    .nw-tag.alm{color:var(--y);background:var(--yd)}
+
+    .set-row input[type=checkbox]{width:22px;height:22px;accent-color:var(--y);cursor:pointer}
+
     /* misc */
     .spinner{display:inline-block;width:11px;height:11px;border:2px solid var(--bd);
              border-top-color:var(--y);border-radius:50%;animation:sp .7s linear infinite;
@@ -208,19 +230,17 @@
     </div>
     <div class="cnt">
       <div class="stat-row">
-        <div class="stat new" id="stat-new-box"><div class="stat-n" id="stat-new">0</div><div class="stat-l">new</div></div>
-        <div class="stat learn" id="stat-learn-box"><div class="stat-n" id="stat-learn">0</div><div class="stat-l">learning</div></div>
-        <div class="stat due" id="stat-due-box"><div class="stat-n" id="stat-due">0</div><div class="stat-l">due</div></div>
+        <div class="stat new" id="stat-total-box"><div class="stat-n" id="stat-total">0</div><div class="stat-l">total</div></div>
+        <div class="stat due" id="stat-acq-box"><div class="stat-n" id="stat-acq">0</div><div class="stat-l">acquired</div></div>
+        <div class="stat learn" id="stat-work-box"><div class="stat-n" id="stat-work">0</div><div class="stat-l">needs work</div></div>
       </div>
 
-      <button class="btn" id="btn-study" onclick="startStudy()">Study Now</button>
-
-      <div class="sec">Export</div>
-      <button class="btn btn-ghost" onclick="exportProgress()">Export progress (JSON)</button>
-      <button class="btn btn-ghost" onclick="exportApkg()" style="margin-top:6px">Export back to .apkg</button>
+      <button class="btn" id="btn-study" onclick="startStudy('all')">Study all cards</button>
+      <button class="btn btn-ghost" id="btn-study-work" onclick="startStudy('work')" style="margin-top:6px">Study needs-work only</button>
 
       <div class="sec">Deck</div>
-      <button class="btn btn-ghost" onclick="renameDeck()">Rename</button>
+      <button class="btn btn-ghost" onclick="resetDeckProgress()">Reset ratings</button>
+      <button class="btn btn-ghost" onclick="renameDeck()" style="margin-top:6px">Rename</button>
       <button class="btn btn-ghost btn-danger" onclick="deleteCurrentDeck()" style="margin-top:6px">Delete Deck</button>
     </div>
   </div>
@@ -234,33 +254,49 @@
     </div>
     <div class="study-wrap">
       <div class="study-progress">
-        <span class="p-new"><em id="cnt-new">0</em> new</span>
-        <span class="p-learn"><em id="cnt-learn">0</em> learning</span>
-        <span class="p-due"><em id="cnt-due">0</em> due</span>
+        <span><em id="cnt-pos">0</em> / <em id="cnt-total">0</em></span>
+        <span class="p-due"><em id="cnt-acq">0</em> acquired</span>
+        <span class="p-learn"><em id="cnt-work">0</em> needs work</span>
       </div>
       <div class="card-face" id="card-face">…</div>
       <button class="reveal-btn" id="reveal-btn" onclick="reveal()">Show Answer</button>
       <div class="answer-row hidden" id="answer-row">
-        <button class="ans again" onclick="answer(1)"><span class="ans-l">again</span><span class="ans-iv" id="iv-1">&lt;1m</span></button>
-        <button class="ans hard"  onclick="answer(2)"><span class="ans-l">hard</span> <span class="ans-iv" id="iv-2">—</span></button>
-        <button class="ans good"  onclick="answer(3)"><span class="ans-l">good</span> <span class="ans-iv" id="iv-3">—</span></button>
-        <button class="ans easy"  onclick="answer(4)"><span class="ans-l">easy</span> <span class="ans-iv" id="iv-4">—</span></button>
+        <button class="ans again" onclick="answer(1)"><span class="ans-l">revision</span></button>
+        <button class="ans hard"  onclick="answer(2)"><span class="ans-l">shaky</span></button>
+        <button class="ans good"  onclick="answer(3)"><span class="ans-l">almost</span></button>
+        <button class="ans easy"  onclick="answer(4)"><span class="ans-l">acquired</span></button>
       </div>
     </div>
   </div>
 
-  <!-- SESSION DONE -->
+  <!-- SESSION DONE / SCOREBOARD -->
   <div id="s-done" class="scr">
     <div class="hd">
       <button class="hd-back" onclick="show('s-home')">← home</button>
-      <div class="hd-title">SESSION DONE</div>
+      <div class="hd-title">SCOREBOARD</div>
     </div>
     <div class="cnt">
       <div class="done-banner">
-        <div class="done-banner-t">all caught up</div>
-        <div class="done-banner-s" id="done-msg">You finished this batch.</div>
+        <div class="done-banner-t" id="done-banner-t">session done</div>
+        <div class="done-banner-s" id="done-msg">You reviewed 0 cards.</div>
       </div>
-      <button class="btn" onclick="goDeck(currentDeckId)">Back to deck</button>
+
+      <div class="sec">Breakdown</div>
+      <div class="score-row">
+        <div class="score-cell sc-acq"><div class="score-n" id="sc-acq">0</div><div class="score-l">acquired</div></div>
+        <div class="score-cell sc-alm"><div class="score-n" id="sc-alm">0</div><div class="score-l">almost</div></div>
+        <div class="score-cell sc-shk"><div class="score-n" id="sc-shk">0</div><div class="score-l">shaky</div></div>
+        <div class="score-cell sc-rev"><div class="score-n" id="sc-rev">0</div><div class="score-l">revision</div></div>
+      </div>
+
+      <div id="needs-work-section" class="hidden">
+        <div class="sec">Needs work</div>
+        <div id="needs-work-list" class="needs-work-list"></div>
+      </div>
+
+      <button class="btn" id="btn-study-work-again" onclick="startStudy('work')" style="margin-top:14px">Study needs-work only</button>
+      <button class="btn btn-ghost" onclick="startStudy('all')" style="margin-top:6px">Study all again</button>
+      <button class="btn btn-ghost" onclick="goDeck(currentDeckId)" style="margin-top:6px">Back to deck</button>
       <button class="btn btn-ghost" onclick="show('s-home')" style="margin-top:6px">Home</button>
     </div>
   </div>
@@ -272,23 +308,19 @@
       <div class="hd-title">SETTINGS</div>
     </div>
     <div class="cnt">
-      <div class="sec">Study limits</div>
+      <div class="sec">Study</div>
       <div class="set-row">
-        <div class="set-row-l">New cards / day<small>How many fresh cards to introduce daily</small></div>
-        <input type="number" id="set-new-limit" min="0" max="999" value="20">
-      </div>
-      <div class="set-row">
-        <div class="set-row-l">Review cap / session<small>Max due cards per study session</small></div>
-        <input type="number" id="set-rev-limit" min="0" max="9999" value="200">
+        <div class="set-row-l">Shuffle cards<small>Randomise card order each session</small></div>
+        <input type="checkbox" id="set-shuffle" checked>
       </div>
 
       <div class="sec">Data</div>
-      <button class="btn btn-ghost" onclick="resetAllProgress()">Reset all progress</button>
+      <button class="btn btn-ghost" onclick="resetAllProgress()">Reset all ratings</button>
       <button class="btn btn-ghost btn-danger" onclick="wipeAll()" style="margin-top:6px">Delete all decks</button>
 
       <div class="sec">About</div>
       <div class="about">
-        <em>Learn</em> is a fully local Anki client. Decks and progress live in this browser only — clearing site data removes them. Import <em>.apkg</em> or <em>.colpkg</em> files exported from Anki Desktop (use the legacy format option if your version offers it).
+        <em>Learn</em> imports your <em>.apkg</em> decks for on-the-go study. Everything lives in this browser only — clearing site data removes it. Rate each card from <em>revision</em> to <em>acquired</em>; the scoreboard tells you what to drill next.
       </div>
     </div>
   </div>
@@ -298,7 +330,6 @@
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/zstd-codec@0.1.5/dist/zstd-codec.js"></script>
   <script>
     // ════════════════════════════════════════════════════════════════════
     //  IndexedDB wrapper
@@ -372,8 +403,9 @@
     // ════════════════════════════════════════════════════════════════════
     let SQL=null;
     let currentDeckId=null;
-    const session={queue:[], idx:0, current:null, shown:false, finished:0};
-    const settings={ newLimit:20, revLimit:200 };
+    const session={queue:[], idx:0, total:0, current:null, shown:false,
+                   counts:{1:0,2:0,3:0,4:0}, needsWork:[]};
+    const settings={ shuffle:true };
     let mediaCache={}; // name -> blob URL (active deck)
 
     // ════════════════════════════════════════════════════════════════════
@@ -403,16 +435,16 @@
     // ════════════════════════════════════════════════════════════════════
     function loadSettings() {
       try { const s=JSON.parse(localStorage.getItem('learn_settings')||'{}'); Object.assign(settings, s); } catch {}
-      document.getElementById('set-new-limit').value=settings.newLimit;
-      document.getElementById('set-rev-limit').value=settings.revLimit;
+      const sh=document.getElementById('set-shuffle');
+      if(sh) sh.checked=!!settings.shuffle;
     }
     function saveSettings() {
-      settings.newLimit=Math.max(0, parseInt(document.getElementById('set-new-limit').value)||0);
-      settings.revLimit=Math.max(0, parseInt(document.getElementById('set-rev-limit').value)||0);
+      const sh=document.getElementById('set-shuffle');
+      if(sh) settings.shuffle=!!sh.checked;
       localStorage.setItem('learn_settings', JSON.stringify(settings));
     }
     document.addEventListener('change', e=>{
-      if(e.target.id==='set-new-limit' || e.target.id==='set-rev-limit') saveSettings();
+      if(e.target.id==='set-shuffle') saveSettings();
     });
 
     // ════════════════════════════════════════════════════════════════════
@@ -578,13 +610,8 @@
             tags: note.tags.trim(),
             modelName: model.name||'',
             modelType: model.type||0,           // 0 = standard, 1 = cloze
-            state: 'new',
-            due: now,
-            interval: 0,
-            ease: 2.5,
-            reps: 0,
-            lapses: 0,
-            lastReviewed: null
+            rating: null,                       // 1=revision .. 4=acquired
+            ratedAt: null
           });
         }
         if(!cards.length) throw new Error('No usable cards found (templates missing)');
@@ -598,10 +625,6 @@
                      totalCards: cards.length, mediaCount: Object.keys(mediaMap).length };
         await put('decks', deck);
         await bulkPut('cards', cards);
-
-        // keep original .apkg so we can repackage on export
-        try { await put('sources', { deckId, blob: new Blob([buf]) }); }
-        catch(e) { console.warn('Could not store source apkg:', e); }
 
         // store media (skip very large files >5MB each)
         for(const [num, name] of Object.entries(mediaMap)) {
@@ -633,18 +656,16 @@
         return;
       }
       decks.sort((a,b)=>b.createdAt-a.createdAt);
-      const now=Date.now();
       const html=['<div class="list-label">your decks</div>'];
       for(const d of decks) {
         const cards = await getByIndex('cards','deck', d.id);
-        const newC = cards.filter(c=>c.state==='new').length;
-        const dueAll = cards.filter(c=> (c.state==='learning'||c.state==='review') && c.due<=now).length;
-        const hasDue = (newC>0) || (dueAll>0);
+        const acq = cards.filter(c=>c.rating===4).length;
+        const work = cards.filter(c=>c.rating!=null && c.rating<4).length;
         html.push(`
-          <div class="deck${hasDue?' has-due':''}" onclick="goDeck('${d.id}')">
+          <div class="deck${work>0?' has-due':''}" onclick="goDeck('${d.id}')">
             <div>
               <div class="deck-name">${esc(d.name)}</div>
-              <div class="deck-meta">${cards.length} cards · <em>${newC}</em> new · <em>${dueAll}</em> due</div>
+              <div class="deck-meta">${cards.length} cards · <em>${acq}</em> acquired · <span class="ml">${work}</span> needs work</div>
             </div>
             <div class="deck-arrow">→</div>
           </div>`);
@@ -661,20 +682,33 @@
       if(!d) { toast('Deck missing','err'); show('s-home'); return; }
       document.getElementById('deck-title').textContent=d.name.toUpperCase();
       const cards = await getByIndex('cards','deck',id);
-      const now=Date.now();
-      const newC = cards.filter(c=>c.state==='new').length;
-      const learnC = cards.filter(c=>c.state==='learning' && c.due<=now).length;
-      const dueC = cards.filter(c=>c.state==='review' && c.due<=now).length;
-      setStat('new', newC); setStat('learn', learnC); setStat('due', dueC);
-      const studyable = Math.min(newC, settings.newLimit) + learnC + Math.min(dueC, settings.revLimit);
-      const btn=document.getElementById('btn-study');
-      btn.disabled = studyable===0;
-      btn.textContent = studyable ? `Study Now (${studyable})` : 'Nothing due';
+      const total = cards.length;
+      const acq = cards.filter(c=>c.rating===4).length;
+      const work = cards.filter(c=>c.rating!=null && c.rating<4).length;
+      setStat('total', total);
+      setStat('acq', acq);
+      setStat('work', work);
+      const btnAll=document.getElementById('btn-study');
+      btnAll.disabled = total===0;
+      btnAll.textContent = total ? `Study all cards (${total})` : 'No cards';
+      const btnWork=document.getElementById('btn-study-work');
+      btnWork.disabled = work===0;
+      btnWork.textContent = work ? `Study needs-work only (${work})` : 'Study needs-work only';
       show('s-deck');
     }
     function setStat(kind, n) {
       document.getElementById('stat-'+kind).textContent=n;
       document.getElementById('stat-'+kind+'-box').classList.toggle('has', n>0);
+    }
+
+    async function resetDeckProgress() {
+      if(!currentDeckId) return;
+      if(!confirm('Clear all ratings for this deck?')) return;
+      const cards = await getByIndex('cards','deck', currentDeckId);
+      for(const c of cards) { c.rating=null; c.ratedAt=null; }
+      await bulkPut('cards', cards);
+      toast('Ratings cleared','ok');
+      goDeck(currentDeckId);
     }
 
     async function renameDeck() {
@@ -786,117 +820,49 @@
     }
 
     // ════════════════════════════════════════════════════════════════════
-    //  Scheduling — simplified SM-2 with Anki-ish learning steps
-    // ════════════════════════════════════════════════════════════════════
-    const MIN=60*1000, DAY=24*60*60*1000;
-    const LEARN_STEPS_MIN=[1, 10];   // minutes
-    const GRAD_INTERVAL_DAYS=1;
-    const EASY_INTERVAL_DAYS=4;
-
-    function applyGrade(card, grade, preview=false) {
-      const now=Date.now();
-      const wasReview = card.state==='review';
-      let c = preview ? {...card} : card;
-
-      if(c.state==='new' || c.state==='learning') {
-        if(grade===1) {
-          c.state='learning';
-          c.interval=LEARN_STEPS_MIN[0];
-          c.due=now + c.interval*MIN;
-        } else if(grade===2) {
-          c.state='learning';
-          c.interval=Math.max(LEARN_STEPS_MIN[0], 5);
-          c.due=now + c.interval*MIN;
-        } else if(grade===3) {
-          let i = LEARN_STEPS_MIN.indexOf(c.interval);
-          if(c.state==='new' || i<0) i=0;
-          if(i < LEARN_STEPS_MIN.length-1) {
-            c.state='learning';
-            c.interval=LEARN_STEPS_MIN[i+1];
-            c.due=now + c.interval*MIN;
-          } else {
-            c.state='review';
-            c.interval=GRAD_INTERVAL_DAYS;
-            c.due=now + c.interval*DAY;
-          }
-        } else if(grade===4) {
-          c.state='review';
-          c.interval=EASY_INTERVAL_DAYS;
-          c.due=now + c.interval*DAY;
-        }
-      } else { // review
-        const ease=c.ease||2.5;
-        if(grade===1) {
-          c.lapses += 1;
-          c.ease = Math.max(1.3, ease - 0.2);
-          c.state='learning';
-          c.interval=LEARN_STEPS_MIN[0];
-          c.due=now + c.interval*MIN;
-        } else if(grade===2) {
-          c.ease=Math.max(1.3, ease-0.15);
-          c.interval=Math.max(1, Math.round(c.interval*1.2));
-          c.due=now + c.interval*DAY;
-        } else if(grade===3) {
-          c.interval=Math.max(1, Math.round(c.interval*ease));
-          c.due=now + c.interval*DAY;
-        } else if(grade===4) {
-          c.ease=ease+0.15;
-          c.interval=Math.max(1, Math.round(c.interval*ease*1.3));
-          c.due=now + c.interval*DAY;
-        }
-      }
-      if(!preview) {
-        c.reps += 1;
-        c.lastReviewed = now;
-      }
-      return c;
-    }
-    function formatInterval(c) {
-      if(c.state==='learning' || c.state==='new') {
-        const m=c.interval;
-        if(m<60) return `${m}m`;
-        const h=Math.round(m/60); if(h<24) return `${h}h`;
-        return `${Math.round(h/24)}d`;
-      }
-      const d=c.interval;
-      if(d<30) return `${d}d`;
-      if(d<365) return `${Math.round(d/30)}mo`;
-      return `${(d/365).toFixed(1)}y`;
-    }
-
-    // ════════════════════════════════════════════════════════════════════
-    //  Study session
+    //  Study session — flat queue, rate-and-tally
     // ════════════════════════════════════════════════════════════════════
     function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
-    async function startStudy() {
+    function cardLabel(c) {
+      const first = (c.fields && c.fields[0]) || '';
+      const s = stripHtml(first).trim().replace(/\s+/g,' ');
+      return s.slice(0, 80) || c.modelName || String(c.ankiId||'card');
+    }
+
+    async function startStudy(mode) {
       if(!currentDeckId) return;
       const cards = await getByIndex('cards','deck',currentDeckId);
-      const now = Date.now();
-      const learnDue  = cards.filter(c=>c.state==='learning' && c.due<=now);
-      const revDue    = shuffle(cards.filter(c=>c.state==='review'  && c.due<=now)).slice(0, settings.revLimit);
-      const newDue    = shuffle(cards.filter(c=>c.state==='new')).slice(0, settings.newLimit);
-      if(!learnDue.length && !revDue.length && !newDue.length) { toast('Nothing to study'); return; }
+      let queue;
+      if(mode==='work') {
+        queue = cards.filter(c=>c.rating!=null && c.rating<4);
+        if(!queue.length) { toast('Nothing flagged needs-work'); return; }
+      } else {
+        queue = cards.slice();
+        if(!queue.length) { toast('No cards in this deck'); return; }
+      }
+      if(settings.shuffle) shuffle(queue);
 
-      session.queue=[...learnDue, ...revDue, ...newDue];
-      session.idx=0; session.finished=0; session.current=null; session.shown=false;
+      session.queue=queue;
+      session.idx=0; session.total=queue.length;
+      session.current=null; session.shown=false;
+      session.counts={1:0,2:0,3:0,4:0};
+      session.needsWork=[];
 
       const d=await get1('decks', currentDeckId);
       document.getElementById('study-deck-title').textContent=d.name.toUpperCase();
-
       await loadMediaForDeck(currentDeckId);
       show('s-study');
       nextCard();
     }
+
     function refreshSessionStats() {
-      const remaining = session.queue.slice(session.idx);
-      const nN = remaining.filter(c=>c.state==='new').length;
-      const nL = remaining.filter(c=>c.state==='learning').length;
-      const nD = remaining.filter(c=>c.state==='review').length;
-      document.getElementById('cnt-new').textContent=nN;
-      document.getElementById('cnt-learn').textContent=nL;
-      document.getElementById('cnt-due').textContent=nD;
+      document.getElementById('cnt-pos').textContent = Math.min(session.idx+1, session.total);
+      document.getElementById('cnt-total').textContent = session.total;
+      document.getElementById('cnt-acq').textContent = session.counts[4];
+      document.getElementById('cnt-work').textContent = session.counts[1]+session.counts[2]+session.counts[3];
     }
+
     function nextCard() {
       if(session.idx >= session.queue.length) { sessionDone(); return; }
       session.current=session.queue[session.idx];
@@ -908,6 +874,7 @@
       document.getElementById('answer-row').classList.add('hidden');
       refreshSessionStats();
     }
+
     function reveal() {
       const c=session.current; if(!c) return;
       const frontHtml=renderTemplate(c.front, c, false, '');
@@ -916,178 +883,70 @@
       document.getElementById('reveal-btn').classList.add('hidden');
       document.getElementById('answer-row').classList.remove('hidden');
       session.shown=true;
-      for(let g=1; g<=4; g++) {
-        const next=applyGrade(c, g, true);
-        document.getElementById('iv-'+g).textContent=formatInterval(next);
-      }
     }
-    async function answer(grade) {
+
+    async function answer(rating) {
       if(!session.shown) return;
       const c=session.current; if(!c) return;
-      applyGrade(c, grade, false);
-      session.queue.splice(session.idx, 1);
-      if(c.state==='learning') {
-        // requeue for later in same session
-        const insertAt = Math.min(session.queue.length, session.idx + 5);
-        session.queue.splice(insertAt, 0, c);
-      } else {
-        session.finished += 1;
-      }
+      c.rating=rating;
+      c.ratedAt=Date.now();
+      session.counts[rating]=(session.counts[rating]||0)+1;
+      if(rating<4) session.needsWork.push({label:cardLabel(c), rating});
       await put('cards', c);
+      session.idx++;
       nextCard();
     }
+
     function skipCard() {
       if(session.idx >= session.queue.length) return;
       const c=session.queue.splice(session.idx,1)[0];
       session.queue.push(c);
       nextCard();
     }
+
     function exitStudy() { freeMediaCache(); show('s-home'); }
+
     function sessionDone() {
       freeMediaCache();
+      document.getElementById('sc-acq').textContent=session.counts[4];
+      document.getElementById('sc-alm').textContent=session.counts[3];
+      document.getElementById('sc-shk').textContent=session.counts[2];
+      document.getElementById('sc-rev').textContent=session.counts[1];
+
+      const totalRated = session.counts[1]+session.counts[2]+session.counts[3]+session.counts[4];
       document.getElementById('done-msg').textContent =
-        session.finished
-          ? `Reviewed ${session.finished} card${session.finished===1?'':'s'}. Come back when more are due.`
-          : 'Nothing to review this session.';
+        totalRated
+          ? `You rated ${totalRated} card${totalRated===1?'':'s'} this session.`
+          : 'No cards rated this session.';
+
+      const sec = document.getElementById('needs-work-section');
+      const list = document.getElementById('needs-work-list');
+      if(session.needsWork.length) {
+        sec.classList.remove('hidden');
+        const order = session.needsWork.slice().sort((a,b)=>a.rating-b.rating);
+        list.innerHTML = order.map(item=>{
+          const tagCls = item.rating===1?'rev':item.rating===2?'shk':'alm';
+          const tagTxt = item.rating===1?'revision':item.rating===2?'shaky':'almost';
+          return `<div class="nw-item"><div class="nw-text">${esc(item.label)}</div><span class="nw-tag ${tagCls}">${tagTxt}</span></div>`;
+        }).join('');
+      } else {
+        sec.classList.add('hidden');
+        list.innerHTML='';
+      }
+
+      document.getElementById('btn-study-work-again').disabled = session.needsWork.length===0;
       show('s-done');
-    }
-
-    // ════════════════════════════════════════════════════════════════════
-    //  Export
-    // ════════════════════════════════════════════════════════════════════
-    async function exportProgress() {
-      if(!currentDeckId) return;
-      const d=await get1('decks', currentDeckId);
-      const cards = await getByIndex('cards','deck', currentDeckId);
-      const data = {
-        format:'learn.v1',
-        exportedAt: new Date().toISOString(),
-        deck: {id:d.id, name:d.name, createdAt:d.createdAt},
-        cards: cards.map(c=>({
-          ankiId:c.ankiId, state:c.state, due:c.due, interval:c.interval,
-          ease:c.ease, reps:c.reps, lapses:c.lapses, lastReviewed:c.lastReviewed
-        }))
-      };
-      downloadFile(JSON.stringify(data,null,2),
-                   `learn-${slug(d.name)}-${Date.now()}.json`, 'application/json');
-      toast('Progress exported','ok');
-    }
-    let _zstdSimple=null;
-    function getZstdEncoder() {
-      if(_zstdSimple) return Promise.resolve(_zstdSimple);
-      return new Promise((resolve, reject)=>{
-        if(typeof ZstdCodec==='undefined') {
-          reject(new Error('zstd encoder failed to load (check connection)'));
-          return;
-        }
-        ZstdCodec.run(zstd=>{ _zstdSimple=new zstd.Simple(); resolve(_zstdSimple); });
-      });
-    }
-
-    async function exportApkg() {
-      if(!currentDeckId) return;
-      const src = await get1('sources', currentDeckId);
-      if(!src || !src.blob) {
-        toast('Original file not stored — re-import this deck to enable .apkg export','err');
-        return;
-      }
-      try {
-        await ensureSQL();
-        const d = await get1('decks', currentDeckId);
-        const cards = await getByIndex('cards','deck', currentDeckId);
-
-        const zip = await JSZip.loadAsync(src.blob);
-        let dbName, needsZstd=false;
-        if(zip.file('collection.anki21b')) { dbName='collection.anki21b'; needsZstd=true; }
-        else if(zip.file('collection.anki21')) dbName='collection.anki21';
-        else if(zip.file('collection.anki2'))  dbName='collection.anki2';
-        else throw new Error('Source .apkg has no collection database');
-
-        let dbBuf = await zip.file(dbName).async('uint8array');
-        if(needsZstd) {
-          if(typeof fzstd==='undefined') throw new Error('zstd decoder not loaded');
-          dbBuf = fzstd.decompress(dbBuf);
-        }
-
-        const adb = new SQL.Database(dbBuf);
-
-        // collection creation time — review-state "due" is days since crt
-        let crt = Math.floor(Date.now()/1000) - 86400;
-        try {
-          const r = adb.exec("SELECT crt FROM col LIMIT 1");
-          if(r[0] && r[0].values[0]) crt = Number(r[0].values[0][0]);
-        } catch(e) {}
-
-        const stmt = adb.prepare(
-          "UPDATE cards SET type=?, queue=?, due=?, ivl=?, factor=?, reps=?, lapses=?, mod=?, usn=-1 WHERE id=?"
-        );
-        const nowSec = Math.floor(Date.now()/1000);
-        let updated = 0;
-        for(const c of cards) {
-          const ankiId = Number(c.ankiId);
-          if(!ankiId) continue;
-          let type, queue, due, ivl;
-          if(c.state==='new') {
-            type=0; queue=0; due=0; ivl=0;
-          } else if(c.state==='learning') {
-            type=1; queue=1;
-            due=Math.floor((c.due||Date.now())/1000);
-            ivl=0;
-          } else {
-            type=2; queue=2;
-            due=Math.floor(((c.due||Date.now())/1000 - crt)/86400);
-            ivl=Math.max(1, Math.round(c.interval||1));
-          }
-          const factor=Math.round((c.ease||2.5)*1000);
-          stmt.run([type, queue, due, ivl, factor, c.reps||0, c.lapses||0, nowSec, ankiId]);
-          updated++;
-        }
-        stmt.free();
-
-        try { adb.run("UPDATE col SET mod=?, scm=? WHERE 1", [nowSec*1000, nowSec*1000]); } catch(e) {}
-
-        let outBuf = adb.export();
-        adb.close();
-
-        if(needsZstd) {
-          const enc = await getZstdEncoder();
-          outBuf = enc.compress(outBuf);
-        }
-        zip.file(dbName, outBuf);
-
-        const blob = await zip.generateAsync({type:'blob', compression:'STORE'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${slug(d.name)}-${Date.now()}.apkg`;
-        a.click();
-        setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
-        toast(`Exported ${updated} card${updated===1?'':'s'} as .apkg`, 'ok');
-      } catch(err) {
-        console.error(err);
-        toast(err.message || 'Export failed', 'err');
-      }
-    }
-    function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'deck'; }
-    function downloadFile(content, filename, mime) {
-      const blob=new Blob([content], {type:mime});
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob); a.download=filename; a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
     }
 
     // ════════════════════════════════════════════════════════════════════
     //  Bulk data actions
     // ════════════════════════════════════════════════════════════════════
     async function resetAllProgress() {
-      if(!confirm('Reset scheduling for ALL decks back to new?')) return;
+      if(!confirm('Clear all ratings for ALL decks?')) return;
       const all=await getAll('cards');
-      const now=Date.now();
-      for(const c of all) {
-        c.state='new'; c.due=now; c.interval=0; c.ease=2.5;
-        c.reps=0; c.lapses=0; c.lastReviewed=null;
-      }
+      for(const c of all) { c.rating=null; c.ratedAt=null; }
       await bulkPut('cards', all);
-      toast('Progress reset','ok');
+      toast('Ratings cleared','ok');
       show('s-home');
     }
     async function wipeAll() {
