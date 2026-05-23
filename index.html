@@ -297,6 +297,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.js"></script>
   <script>
     // ════════════════════════════════════════════════════════════════════
     //  IndexedDB wrapper
@@ -439,13 +440,20 @@
         const buf=await file.arrayBuffer();
         const zip=await JSZip.loadAsync(buf);
 
-        let dbFile = zip.file('collection.anki21') || zip.file('collection.anki2');
-        if(!dbFile && zip.file('collection.anki21b')) {
-          throw new Error('This .apkg uses the new compressed format. In Anki, re-export with "Support older Anki versions" enabled.');
-        }
+        // Priority: .anki21b (new, zstd) > .anki21 > .anki2
+        // New-format .apkg also includes a stub .anki2 with just a "please update Anki" note,
+        // so we MUST check .anki21b first.
+        let dbFile, needsZstd=false;
+        if(zip.file('collection.anki21b')) { dbFile=zip.file('collection.anki21b'); needsZstd=true; }
+        else if(zip.file('collection.anki21')) dbFile=zip.file('collection.anki21');
+        else if(zip.file('collection.anki2'))  dbFile=zip.file('collection.anki2');
         if(!dbFile) throw new Error('No collection database found in this .apkg');
 
-        const dbBuf=await dbFile.async('uint8array');
+        let dbBuf=await dbFile.async('uint8array');
+        if(needsZstd) {
+          if(typeof fzstd === 'undefined') throw new Error('zstd decoder failed to load (check connection)');
+          dbBuf = fzstd.decompress(dbBuf);
+        }
         const adb=new SQL.Database(dbBuf);
 
         const colRow=adb.exec("SELECT decks, models FROM col LIMIT 1")[0];
