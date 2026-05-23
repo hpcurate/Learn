@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LEARN">
+  <meta name="theme-color" content="#0e0e0e">
+  <title>LEARN</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0e0e0e; --s1:#161616; --s2:#1e1e1e; --bd:#272727;
+      --y:#A78BFA; --yd:rgba(167,139,250,.13); --yb:rgba(167,139,250,.25);
+      --tx:#dedede; --mu:#4a4a4a;
+      --gr:#5cdb7d; --gd:rgba(92,219,125,.12);
+      --or:#e0a060; --od:rgba(224,160,96,.12);
+      --re:#e06060; --rd:rgba(224,96,96,.12);
+      --mono:'JetBrains Mono','Courier New',monospace;
+      --head:'Syne',sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html{height:100%}
+    body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:14px;height:100%;overscroll-behavior:none}
+
+    .scr{display:none;height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+    .scr.on{display:block}
+    #s-home{padding-top:env(safe-area-inset-top)}
+
+    /* sticky sub-screen header */
+    .hd{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--bd);
+        padding:calc(14px + env(safe-area-inset-top)) 18px 14px;
+        display:flex;align-items:center;gap:14px;z-index:10}
+    .hd-back{background:none;border:none;color:var(--y);font:400 12px/1 var(--mono);cursor:pointer;letter-spacing:.06em;padding:4px 0}
+    .hd-title{font:800 15px/1 var(--head);letter-spacing:.1em;text-transform:uppercase;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .hd-action{background:none;border:none;color:var(--mu);font:400 11px/1 var(--mono);cursor:pointer;letter-spacing:.06em;padding:4px 0;transition:color .12s}
+    .hd-action:active{color:var(--y)}
+
+    /* home top */
+    .h-top{padding:calc(env(safe-area-inset-top) + 28px) 18px 0;position:relative}
+    .h-label{font:700 10px/1 var(--head);letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
+    .h-logo{font:800 54px/1 var(--head);letter-spacing:-.02em;margin-bottom:24px}
+    .h-logo em{color:var(--y);font-style:normal}
+    .h-settings-btn{position:absolute;top:calc(env(safe-area-inset-top) + 28px);right:18px;
+                    background:none;border:none;color:var(--mu);font:400 11px/1 var(--mono);
+                    cursor:pointer;letter-spacing:.06em;padding:4px 0;transition:color .12s}
+    .h-settings-btn:active{color:var(--y)}
+
+    /* import zone */
+    .import-zone{display:block;margin:0 18px 14px;border:1px dashed var(--bd);border-radius:4px;
+                 padding:22px 16px;text-align:center;cursor:pointer;user-select:none;
+                 transition:border-color .12s,background .12s}
+    .import-zone:active{background:var(--s1)}
+    .import-zone.over{border-color:var(--y);background:var(--yd)}
+    .iz-t{font:700 11px/1 var(--head);letter-spacing:.14em;text-transform:uppercase;color:var(--tx);margin-bottom:6px}
+    .iz-s{font:400 10px/1.5 var(--mono);color:var(--mu);letter-spacing:.04em}
+    .import-zone input{display:none}
+
+    /* deck list */
+    .deck-list{padding:0 18px}
+    .list-label{font:700 10px/1 var(--head);letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:8px 0 10px}
+    .deck{background:var(--s1);border:1px solid var(--bd);border-radius:4px;padding:16px 15px;
+          margin-bottom:8px;cursor:pointer;transition:border-color .12s,background .12s;user-select:none;
+          display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+    .deck:active{background:var(--s2)}
+    .deck.has-due{border-color:var(--y)}
+    .deck-name{font:700 13px/1.2 var(--head);letter-spacing:.06em;text-transform:uppercase;
+               overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .deck-meta{font:400 10px/1.5 var(--mono);color:var(--mu);letter-spacing:.04em;margin-top:6px}
+    .deck-meta em{color:var(--y);font-style:normal}
+    .deck-meta .ml{color:var(--or);font-style:normal}
+    .deck-arrow{color:var(--mu);font:400 14px/1 var(--mono)}
+
+    .empty-state{padding:32px 18px 40px;text-align:center;color:var(--mu);
+                 font:400 12px/1.7 var(--mono);letter-spacing:.04em}
+    .empty-state em{color:var(--y);font-style:normal}
+
+    /* sections + content */
+    .cnt{padding:18px}
+    .sec{font:700 10px/1 var(--head);letter-spacing:.15em;text-transform:uppercase;color:var(--y);
+         margin:6px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--bd)}
+    .sec:not(:first-child){margin-top:22px}
+
+    /* stats */
+    .stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:18px}
+    .stat{background:var(--s1);border:1px solid var(--bd);border-radius:3px;padding:14px 6px;text-align:center}
+    .stat-n{font:700 22px/1 var(--mono);margin-bottom:6px;color:var(--mu)}
+    .stat-l{font:400 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mu)}
+    .stat.has .stat-n{color:var(--tx)}
+    .stat.new.has .stat-n{color:var(--y)}
+    .stat.learn.has .stat-n{color:var(--or)}
+    .stat.due.has .stat-n{color:var(--gr)}
+
+    /* buttons */
+    .btn{width:100%;background:var(--y);border:none;border-radius:3px;color:#0e0e0e;
+         font:700 14px/1 var(--head);letter-spacing:.1em;text-transform:uppercase;
+         padding:16px;cursor:pointer;margin-top:6px;transition:opacity .15s}
+    .btn:active{opacity:.82}
+    .btn:disabled{opacity:.35;cursor:default}
+    .btn-ghost{background:transparent;border:1px solid var(--bd);color:var(--tx)}
+    .btn-ghost:active{background:var(--s2)}
+    .btn-danger{background:var(--re);color:#fff;border:none}
+
+    /* study */
+    .study-wrap{padding:18px;display:flex;flex-direction:column;
+                min-height:calc(100dvh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+    .study-progress{display:flex;gap:14px;font:400 10px/1 var(--mono);letter-spacing:.1em;color:var(--mu);margin-bottom:14px;flex-wrap:wrap}
+    .study-progress em{font-style:normal}
+    .p-new em{color:var(--y)} .p-learn em{color:var(--or)} .p-due em{color:var(--gr)}
+    .card-face{background:var(--s1);border:1px solid var(--bd);border-radius:4px;
+               padding:24px 18px;font:400 17px/1.65 var(--mono);color:var(--tx);
+               min-height:220px;display:flex;align-items:center;justify-content:center;text-align:center;
+               flex:1;word-break:break-word;overflow-y:auto;overflow-wrap:break-word}
+    .card-face > div{max-width:100%;width:100%}
+    .card-face img{max-width:100%;height:auto;max-height:55vh;border-radius:3px;display:block;margin:8px auto}
+    .card-face hr{border:none;border-top:1px solid var(--bd);margin:14px auto;width:60%}
+    .card-face audio{margin:10px auto;display:block;max-width:100%}
+    .card-face code,.card-face pre{background:var(--bg);padding:2px 6px;border-radius:2px;font-family:var(--mono);font-size:.9em}
+    .card-face ul,.card-face ol{text-align:left;margin:8px 0 8px 20px}
+    .card-face b,.card-face strong{color:var(--tx);font-weight:700}
+
+    .reveal-btn{width:100%;background:var(--s1);border:1px solid var(--bd);border-radius:3px;color:var(--tx);
+                font:700 12px/1 var(--head);letter-spacing:.12em;text-transform:uppercase;
+                padding:18px;cursor:pointer;margin-top:14px;transition:all .12s}
+    .reveal-btn:active{background:var(--s2);border-color:var(--y)}
+
+    .answer-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:14px}
+    .ans{background:var(--s1);border:1px solid var(--bd);border-radius:3px;
+         padding:13px 4px;cursor:pointer;text-align:center;transition:all .1s;
+         display:flex;flex-direction:column;gap:5px;align-items:center}
+    .ans-l{font:700 10px/1 var(--head);letter-spacing:.1em;text-transform:uppercase}
+    .ans-iv{font:400 9px/1 var(--mono);color:var(--mu);letter-spacing:.04em}
+    .ans.again{border-color:rgba(224,96,96,.4)} .ans.again .ans-l{color:var(--re)}
+    .ans.hard{border-color:rgba(224,160,96,.4)} .ans.hard .ans-l{color:var(--or)}
+    .ans.good{border-color:rgba(167,139,250,.4)} .ans.good .ans-l{color:var(--y)}
+    .ans.easy{border-color:rgba(92,219,125,.4)}  .ans.easy .ans-l{color:var(--gr)}
+    .ans:active{background:var(--s2)}
+
+    /* done banner */
+    .done-banner{background:var(--gd);border:1px solid rgba(92,219,125,.3);border-radius:4px;
+                 padding:22px 16px;text-align:center;margin-bottom:18px}
+    .done-banner-t{font:700 12px/1 var(--head);letter-spacing:.1em;text-transform:uppercase;color:var(--gr);margin-bottom:8px}
+    .done-banner-s{font:400 11px/1.6 var(--mono);color:var(--tx);letter-spacing:.04em}
+
+    /* settings rows */
+    .set-row{display:flex;justify-content:space-between;align-items:center;
+             background:var(--s1);border:1px solid var(--bd);border-radius:3px;
+             padding:13px 14px;margin-bottom:6px;gap:12px}
+    .set-row-l{font:400 12px/1.4 var(--mono);color:var(--tx);letter-spacing:.04em;flex:1}
+    .set-row-l small{display:block;color:var(--mu);font-size:10px;letter-spacing:.04em;margin-top:3px;font-weight:400}
+    .set-row input[type=number]{
+      width:76px;background:var(--bg);border:1px solid var(--bd);border-radius:3px;
+      color:var(--tx);font:400 14px/1 var(--mono);padding:8px 10px;outline:none;
+      -webkit-appearance:none;appearance:none;text-align:center}
+    .set-row input[type=number]:focus{border-color:var(--y)}
+    .set-row input[type=number]::-webkit-inner-spin-button,
+    .set-row input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+    .about{font:400 11px/1.75 var(--mono);color:var(--mu);letter-spacing:.04em;padding:6px 4px}
+    .about em{color:var(--y);font-style:normal}
+
+    /* toast */
+    .toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));
+           transform:translateX(-50%) translateY(8px);background:var(--s2);border:1px solid var(--bd);
+           border-radius:3px;color:var(--tx);font:400 11px/1.5 var(--mono);
+           letter-spacing:.04em;padding:11px 18px;z-index:50;
+           opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;
+           max-width:84vw;text-align:center}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .toast.err{border-color:var(--re);color:var(--re)}
+    .toast.ok{border-color:var(--gr);color:var(--gr)}
+
+    /* misc */
+    .spinner{display:inline-block;width:11px;height:11px;border:2px solid var(--bd);
+             border-top-color:var(--y);border-radius:50%;animation:sp .7s linear infinite;
+             vertical-align:middle;margin-right:8px;margin-bottom:1px}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .hidden{display:none!important}
+  </style>
+</head>
+<body>
+  <!-- HOME -->
+  <div id="s-home" class="scr on">
+    <div class="h-top">
+      <div class="h-label">study on the go</div>
+      <div class="h-logo">lear<em>n</em></div>
+      <button class="h-settings-btn" onclick="show('s-settings')">settings →</button>
+    </div>
+
+    <label class="import-zone" id="import-zone">
+      <input type="file" id="file-input" accept=".apkg,.colpkg" />
+      <div class="iz-t" id="iz-t">Import .apkg</div>
+      <div class="iz-s" id="iz-s">Tap to choose, or drop a file here</div>
+    </label>
+
+    <div class="deck-list" id="deck-list"></div>
+  </div>
+
+  <!-- DECK DETAIL -->
+  <div id="s-deck" class="scr">
+    <div class="hd">
+      <button class="hd-back" onclick="show('s-home')">← back</button>
+      <div class="hd-title" id="deck-title">DECK</div>
+    </div>
+    <div class="cnt">
+      <div class="stat-row">
+        <div class="stat new" id="stat-new-box"><div class="stat-n" id="stat-new">0</div><div class="stat-l">new</div></div>
+        <div class="stat learn" id="stat-learn-box"><div class="stat-n" id="stat-learn">0</div><div class="stat-l">learning</div></div>
+        <div class="stat due" id="stat-due-box"><div class="stat-n" id="stat-due">0</div><div class="stat-l">due</div></div>
+      </div>
+
+      <button class="btn" id="btn-study" onclick="startStudy()">Study Now</button>
+
+      <div class="sec">Export</div>
+      <button class="btn btn-ghost" onclick="exportProgress()">Export progress (JSON)</button>
+      <button class="btn btn-ghost" onclick="exportApkg()" style="margin-top:6px">Export back to .apkg</button>
+
+      <div class="sec">Deck</div>
+      <button class="btn btn-ghost" onclick="renameDeck()">Rename</button>
+      <button class="btn btn-ghost btn-danger" onclick="deleteCurrentDeck()" style="margin-top:6px">Delete Deck</button>
+    </div>
+  </div>
+
+  <!-- STUDY -->
+  <div id="s-study" class="scr">
+    <div class="hd">
+      <button class="hd-back" onclick="exitStudy()">✕</button>
+      <div class="hd-title" id="study-deck-title">STUDY</div>
+      <button class="hd-action" onclick="skipCard()">skip</button>
+    </div>
+    <div class="study-wrap">
+      <div class="study-progress">
+        <span class="p-new"><em id="cnt-new">0</em> new</span>
+        <span class="p-learn"><em id="cnt-learn">0</em> learning</span>
+        <span class="p-due"><em id="cnt-due">0</em> due</span>
+      </div>
+      <div class="card-face" id="card-face">…</div>
+      <button class="reveal-btn" id="reveal-btn" onclick="reveal()">Show Answer</button>
+      <div class="answer-row hidden" id="answer-row">
+        <button class="ans again" onclick="answer(1)"><span class="ans-l">again</span><span class="ans-iv" id="iv-1">&lt;1m</span></button>
+        <button class="ans hard"  onclick="answer(2)"><span class="ans-l">hard</span> <span class="ans-iv" id="iv-2">—</span></button>
+        <button class="ans good"  onclick="answer(3)"><span class="ans-l">good</span> <span class="ans-iv" id="iv-3">—</span></button>
+        <button class="ans easy"  onclick="answer(4)"><span class="ans-l">easy</span> <span class="ans-iv" id="iv-4">—</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSION DONE -->
+  <div id="s-done" class="scr">
+    <div class="hd">
+      <button class="hd-back" onclick="show('s-home')">← home</button>
+      <div class="hd-title">SESSION DONE</div>
+    </div>
+    <div class="cnt">
+      <div class="done-banner">
+        <div class="done-banner-t">all caught up</div>
+        <div class="done-banner-s" id="done-msg">You finished this batch.</div>
+      </div>
+      <button class="btn" onclick="goDeck(currentDeckId)">Back to deck</button>
+      <button class="btn btn-ghost" onclick="show('s-home')" style="margin-top:6px">Home</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="s-settings" class="scr">
+    <div class="hd">
+      <button class="hd-back" onclick="show('s-home')">← back</button>
+      <div class="hd-title">SETTINGS</div>
+    </div>
+    <div class="cnt">
+      <div class="sec">Study limits</div>
+      <div class="set-row">
+        <div class="set-row-l">New cards / day<small>How many fresh cards to introduce daily</small></div>
+        <input type="number" id="set-new-limit" min="0" max="999" value="20">
+      </div>
+      <div class="set-row">
+        <div class="set-row-l">Review cap / session<small>Max due cards per study session</small></div>
+        <input type="number" id="set-rev-limit" min="0" max="9999" value="200">
+      </div>
+
+      <div class="sec">Data</div>
+      <button class="btn btn-ghost" onclick="resetAllProgress()">Reset all progress</button>
+      <button class="btn btn-ghost btn-danger" onclick="wipeAll()" style="margin-top:6px">Delete all decks</button>
+
+      <div class="sec">About</div>
+      <div class="about">
+        <em>Learn</em> is a fully local Anki client. Decks and progress live in this browser only — clearing site data removes them. Import <em>.apkg</em> or <em>.colpkg</em> files exported from Anki Desktop (use the legacy format option if your version offers it).
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+  <script>
+    // ════════════════════════════════════════════════════════════════════
+    //  IndexedDB wrapper
+    // ════════════════════════════════════════════════════════════════════
+    const DB_NAME='learn_v1', DB_VER=1;
+    let _db;
+    function db() {
+      if(_db) return Promise.resolve(_db);
+      return new Promise((res,rej)=>{
+        const r=indexedDB.open(DB_NAME, DB_VER);
+        r.onupgradeneeded=()=>{
+          const d=r.result;
+          if(!d.objectStoreNames.contains('decks')) d.createObjectStore('decks',{keyPath:'id'});
+          if(!d.objectStoreNames.contains('cards')) {
+            const s=d.createObjectStore('cards',{keyPath:'id'});
+            s.createIndex('deck','deckId',{unique:false});
+          }
+          if(!d.objectStoreNames.contains('media')) d.createObjectStore('media',{keyPath:'key'});
+        };
+        r.onsuccess=()=>{_db=r.result; res(_db);};
+        r.onerror=()=>rej(r.error);
+      });
+    }
+    function tx(stores, mode='readonly') { return db().then(d=>d.transaction(stores, mode)); }
+    function put(store, val) {
+      return tx([store],'readwrite').then(t=>new Promise((res,rej)=>{
+        const r=t.objectStore(store).put(val); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);
+      }));
+    }
+    function getAll(store) {
+      return tx([store]).then(t=>new Promise((res,rej)=>{
+        const r=t.objectStore(store).getAll(); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+      }));
+    }
+    function get1(store, key) {
+      return tx([store]).then(t=>new Promise((res,rej)=>{
+        const r=t.objectStore(store).get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+      }));
+    }
+    function del1(store, key) {
+      return tx([store],'readwrite').then(t=>new Promise((res,rej)=>{
+        const r=t.objectStore(store).delete(key); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);
+      }));
+    }
+    function getByIndex(store, index, value) {
+      return tx([store]).then(t=>new Promise((res,rej)=>{
+        const idx=t.objectStore(store).index(index);
+        const r=idx.getAll(IDBKeyRange.only(value));
+        r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+      }));
+    }
+    function delByIndex(store, index, value) {
+      return tx([store],'readwrite').then(t=>new Promise((res,rej)=>{
+        const idx=t.objectStore(store).index(index);
+        const req=idx.openCursor(IDBKeyRange.only(value));
+        req.onsuccess=()=>{ const c=req.result; if(c){c.delete(); c.continue();} else res(); };
+        req.onerror=()=>rej(req.error);
+      }));
+    }
+    function bulkPut(store, items) {
+      return tx([store],'readwrite').then(t=>new Promise((res,rej)=>{
+        const s=t.objectStore(store);
+        items.forEach(it=>s.put(it));
+        t.oncomplete=()=>res(); t.onerror=()=>rej(t.error);
+      }));
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  App state
+    // ════════════════════════════════════════════════════════════════════
+    let SQL=null;
+    let currentDeckId=null;
+    const session={queue:[], idx:0, current:null, shown:false, finished:0};
+    const settings={ newLimit:20, revLimit:200 };
+    let mediaCache={}; // name -> blob URL (active deck)
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Routing
+    // ════════════════════════════════════════════════════════════════════
+    function show(id) {
+      document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on', s.id===id));
+      window.scrollTo(0,0);
+      if(id==='s-home') renderHome();
+      if(id==='s-settings') loadSettings();
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Toast
+    // ════════════════════════════════════════════════════════════════════
+    let _toastT;
+    function toast(msg, kind) {
+      const t=document.getElementById('toast');
+      t.textContent=msg;
+      t.className='toast show'+(kind?' '+kind:'');
+      clearTimeout(_toastT);
+      _toastT=setTimeout(()=>t.classList.remove('show'), 2600);
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Settings persistence (small enough for localStorage)
+    // ════════════════════════════════════════════════════════════════════
+    function loadSettings() {
+      try { const s=JSON.parse(localStorage.getItem('learn_settings')||'{}'); Object.assign(settings, s); } catch {}
+      document.getElementById('set-new-limit').value=settings.newLimit;
+      document.getElementById('set-rev-limit').value=settings.revLimit;
+    }
+    function saveSettings() {
+      settings.newLimit=Math.max(0, parseInt(document.getElementById('set-new-limit').value)||0);
+      settings.revLimit=Math.max(0, parseInt(document.getElementById('set-rev-limit').value)||0);
+      localStorage.setItem('learn_settings', JSON.stringify(settings));
+    }
+    document.addEventListener('change', e=>{
+      if(e.target.id==='set-new-limit' || e.target.id==='set-rev-limit') saveSettings();
+    });
+
+    // ════════════════════════════════════════════════════════════════════
+    //  .apkg import
+    // ════════════════════════════════════════════════════════════════════
+    document.getElementById('file-input').addEventListener('change', e=>{
+      const f=e.target.files[0]; if(f) handleFile(f); e.target.value='';
+    });
+    const iz=document.getElementById('import-zone');
+    ['dragenter','dragover'].forEach(ev=>iz.addEventListener(ev,e=>{e.preventDefault();iz.classList.add('over')}));
+    ['dragleave','drop'].forEach(ev=>iz.addEventListener(ev,e=>{e.preventDefault();iz.classList.remove('over')}));
+    iz.addEventListener('drop', e=>{ const f=e.dataTransfer.files[0]; if(f) handleFile(f); });
+
+    async function ensureSQL() {
+      if(SQL) return SQL;
+      SQL = await initSqlJs({ locateFile: f=>`https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
+      return SQL;
+    }
+
+    async function handleFile(file) {
+      const t=document.getElementById('iz-t'), s=document.getElementById('iz-s');
+      const origT=t.innerHTML, origS=s.textContent;
+      t.innerHTML='<span class="spinner"></span>Importing';
+      s.textContent=file.name;
+      try {
+        await ensureSQL();
+        const buf=await file.arrayBuffer();
+        const zip=await JSZip.loadAsync(buf);
+
+        let dbFile = zip.file('collection.anki21') || zip.file('collection.anki2');
+        if(!dbFile && zip.file('collection.anki21b')) {
+          throw new Error('This .apkg uses the new compressed format. In Anki, re-export with "Support older Anki versions" enabled.');
+        }
+        if(!dbFile) throw new Error('No collection database found in this .apkg');
+
+        const dbBuf=await dbFile.async('uint8array');
+        const adb=new SQL.Database(dbBuf);
+
+        const colRow=adb.exec("SELECT decks, models FROM col LIMIT 1")[0];
+        if(!colRow) throw new Error('Empty Anki collection');
+        const decksJson=JSON.parse(colRow.values[0][0]);
+        const modelsJson=JSON.parse(colRow.values[0][1]);
+
+        // notes
+        const notes={};
+        const nr=adb.exec("SELECT id, mid, flds, tags FROM notes");
+        if(nr[0]) nr[0].values.forEach(r=>{
+          notes[String(r[0])]={mid:String(r[1]), flds:String(r[2]||'').split('\x1f'), tags:String(r[3]||'')};
+        });
+
+        // cards
+        const cr=adb.exec("SELECT id, nid, did, ord FROM cards");
+        const ankiCards = cr[0] ? cr[0].values : [];
+        adb.close();
+
+        if(!ankiCards.length) throw new Error('No cards found in this file');
+
+        // figure out a deck name (use the deck with the most cards)
+        let defaultName=file.name.replace(/\.(apkg|colpkg)$/i,'');
+        const dCounts={};
+        ankiCards.forEach(r=>{ const d=String(r[2]); dCounts[d]=(dCounts[d]||0)+1; });
+        let best=null,max=-1;
+        Object.entries(dCounts).forEach(([d,c])=>{ if(c>max){max=c;best=d;} });
+        if(best && decksJson[best]) {
+          const fullName=decksJson[best].name||'';
+          defaultName = fullName.split('::').pop() || defaultName;
+        }
+
+        const deckId='dk_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
+        const cards=[];
+        const now=Date.now();
+        for(const r of ankiCards){
+          const [aid,nid,did,ord]=r;
+          const note=notes[String(nid)];
+          if(!note) continue;
+          const model=modelsJson[note.mid];
+          if(!model || !model.tmpls || !model.tmpls.length) continue;
+          const tmpl=model.tmpls[ord]||model.tmpls[0];
+          if(!tmpl) continue;
+          cards.push({
+            id: deckId+'_'+aid,
+            deckId, ankiId: String(aid),
+            front: tmpl.qfmt, back: tmpl.afmt,
+            fields: note.flds,
+            fieldNames: (model.flds||[]).map(f=>f.name),
+            tags: note.tags.trim(),
+            modelName: model.name||'',
+            modelType: model.type||0,           // 0 = standard, 1 = cloze
+            state: 'new',
+            due: now,
+            interval: 0,
+            ease: 2.5,
+            reps: 0,
+            lapses: 0,
+            lastReviewed: null
+          });
+        }
+        if(!cards.length) throw new Error('No usable cards found (templates missing)');
+
+        // media
+        let mediaMap={};
+        const mediaF=zip.file('media');
+        if(mediaF) { try{ mediaMap=JSON.parse(await mediaF.async('string')); }catch{} }
+
+        const deck={ id: deckId, name: defaultName, createdAt: Date.now(),
+                     totalCards: cards.length, mediaCount: Object.keys(mediaMap).length };
+        await put('decks', deck);
+        await bulkPut('cards', cards);
+
+        // store media (skip very large files >5MB each)
+        for(const [num, name] of Object.entries(mediaMap)) {
+          const mf=zip.file(num);
+          if(!mf) continue;
+          const blob=await mf.async('blob');
+          if(blob.size > 5*1024*1024) continue;
+          await put('media', { key: deckId+'/'+name, blob });
+        }
+
+        t.innerHTML=origT; s.textContent=origS;
+        toast(`Imported ${cards.length} cards`, 'ok');
+        await renderHome();
+      } catch(err) {
+        console.error(err);
+        t.innerHTML=origT; s.textContent=origS;
+        toast(err.message || 'Import failed', 'err');
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Home render
+    // ════════════════════════════════════════════════════════════════════
+    async function renderHome() {
+      const decks = await getAll('decks');
+      const list = document.getElementById('deck-list');
+      if(!decks.length) {
+        list.innerHTML = `<div class="empty-state">No decks yet.<br/>Tap <em>import</em> above to bring your Anki deck in.</div>`;
+        return;
+      }
+      decks.sort((a,b)=>b.createdAt-a.createdAt);
+      const now=Date.now();
+      const html=['<div class="list-label">your decks</div>'];
+      for(const d of decks) {
+        const cards = await getByIndex('cards','deck', d.id);
+        const newC = cards.filter(c=>c.state==='new').length;
+        const dueAll = cards.filter(c=> (c.state==='learning'||c.state==='review') && c.due<=now).length;
+        const hasDue = (newC>0) || (dueAll>0);
+        html.push(`
+          <div class="deck${hasDue?' has-due':''}" onclick="goDeck('${d.id}')">
+            <div>
+              <div class="deck-name">${esc(d.name)}</div>
+              <div class="deck-meta">${cards.length} cards · <em>${newC}</em> new · <em>${dueAll}</em> due</div>
+            </div>
+            <div class="deck-arrow">→</div>
+          </div>`);
+      }
+      list.innerHTML=html.join('');
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Deck detail
+    // ════════════════════════════════════════════════════════════════════
+    async function goDeck(id) {
+      currentDeckId=id;
+      const d=await get1('decks', id);
+      if(!d) { toast('Deck missing','err'); show('s-home'); return; }
+      document.getElementById('deck-title').textContent=d.name.toUpperCase();
+      const cards = await getByIndex('cards','deck',id);
+      const now=Date.now();
+      const newC = cards.filter(c=>c.state==='new').length;
+      const learnC = cards.filter(c=>c.state==='learning' && c.due<=now).length;
+      const dueC = cards.filter(c=>c.state==='review' && c.due<=now).length;
+      setStat('new', newC); setStat('learn', learnC); setStat('due', dueC);
+      const studyable = Math.min(newC, settings.newLimit) + learnC + Math.min(dueC, settings.revLimit);
+      const btn=document.getElementById('btn-study');
+      btn.disabled = studyable===0;
+      btn.textContent = studyable ? `Study Now (${studyable})` : 'Nothing due';
+      show('s-deck');
+    }
+    function setStat(kind, n) {
+      document.getElementById('stat-'+kind).textContent=n;
+      document.getElementById('stat-'+kind+'-box').classList.toggle('has', n>0);
+    }
+
+    async function renameDeck() {
+      if(!currentDeckId) return;
+      const d=await get1('decks', currentDeckId);
+      const name=prompt('Deck name:', d.name);
+      if(!name || !name.trim()) return;
+      d.name=name.trim();
+      await put('decks', d);
+      document.getElementById('deck-title').textContent=d.name.toUpperCase();
+      toast('Renamed','ok');
+    }
+    async function deleteCurrentDeck() {
+      if(!currentDeckId) return;
+      if(!confirm('Delete this deck and all its progress? This cannot be undone.')) return;
+      await delByIndex('cards','deck',currentDeckId);
+      const media = await getAll('media');
+      const prefix = currentDeckId+'/';
+      for(const m of media) if(m.key.startsWith(prefix)) await del1('media', m.key);
+      await del1('decks', currentDeckId);
+      currentDeckId=null;
+      toast('Deck deleted');
+      show('s-home');
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Media (blob URLs scoped to active deck)
+    // ════════════════════════════════════════════════════════════════════
+    function freeMediaCache() {
+      Object.values(mediaCache).forEach(URL.revokeObjectURL);
+      mediaCache={};
+    }
+    async function loadMediaForDeck(deckId) {
+      freeMediaCache();
+      const all=await getAll('media');
+      const pref=deckId+'/';
+      for(const m of all) {
+        if(m.key.startsWith(pref)) mediaCache[m.key.slice(pref.length)] = URL.createObjectURL(m.blob);
+      }
+    }
+    function rewriteMedia(html) {
+      html = html.replace(/<img\s+([^>]*?)src=(["'])([^"']+)\2/gi, (m, pre, q, src)=>{
+        const u=mediaCache[decodeURIComponent(src)] || mediaCache[src];
+        return u ? `<img ${pre}src=${q}${u}${q}` : m;
+      });
+      html = html.replace(/\[sound:([^\]]+)\]/g, (m, name)=>{
+        const u=mediaCache[name];
+        return u ? `<audio controls src="${u}"></audio>` : '';
+      });
+      return html;
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Card template rendering (Mustache-ish, Anki subset)
+    // ════════════════════════════════════════════════════════════════════
+    function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function stripHtml(s){ return String(s).replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' '); }
+
+    function fieldVal(card, name) {
+      name=name.trim();
+      const idx=card.fieldNames.indexOf(name);
+      return idx>=0 ? (card.fields[idx]||'') : '';
+    }
+    function renderTemplate(tmpl, card, isAnswer, frontHtml) {
+      let out = tmpl || '';
+      // cloze (anki cloze type uses {{cloze:Field}})
+      out = out.replace(/\{\{cloze:([^}]+)\}\}/g, (m, fname)=>{
+        const v=fieldVal(card, fname);
+        return renderCloze(v, isAnswer);
+      });
+      // Implicit cloze: if model is cloze type, fields contain {{c1::ans}} directly — render in-place
+      if(card.modelType===1) {
+        out = out.replace(/\{\{c\d+::[^}]*\}\}/g, m=>renderCloze(m, isAnswer));
+      }
+      // conditionals {{#F}}body{{/F}}, {{^F}}body{{/F}} (no nesting)
+      for(let i=0;i<3;i++) {
+        out = out.replace(/\{\{#([^}]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (m, name, body)=>{
+          return stripHtml(fieldVal(card,name)).trim() ? body : '';
+        });
+        out = out.replace(/\{\{\^([^}]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (m, name, body)=>{
+          return stripHtml(fieldVal(card,name)).trim() ? '' : body;
+        });
+      }
+      // type:Field — show as input on front, answer on back
+      out = out.replace(/\{\{type:([^}]+)\}\}/g, (m, name)=>{
+        const v=fieldVal(card, name);
+        return isAnswer ? `<div style="color:var(--y)">${esc(stripHtml(v))}</div>`
+                        : `<div style="color:var(--mu);font-style:italic">[type the answer]</div>`;
+      });
+      // text:Field / hint:Field — both just render value
+      out = out.replace(/\{\{(?:text|hint):([^}]+)\}\}/g, (m, name)=>fieldVal(card, name));
+      // FrontSide
+      out = out.replace(/\{\{FrontSide\}\}/g, frontHtml||'');
+      // remaining {{Field}}
+      out = out.replace(/\{\{([^}]+)\}\}/g, (m, name)=>{
+        if(/^[#^/]/.test(name)) return ''; // stray conditional marker
+        if(name.startsWith('cloze:')||name.startsWith('type:')||name.startsWith('text:')||name.startsWith('hint:')) return '';
+        return fieldVal(card, name);
+      });
+      return out;
+    }
+    function renderCloze(s, reveal) {
+      return String(s).replace(/\{\{c(\d+)::([^}]*?)(?:::([^}]*?))?\}\}/g, (m, n, ans, hint)=>{
+        return reveal
+          ? `<span style="color:var(--y);font-weight:700">${ans}</span>`
+          : `<span style="color:var(--mu)">[${hint||'...'}]</span>`;
+      });
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Scheduling — simplified SM-2 with Anki-ish learning steps
+    // ════════════════════════════════════════════════════════════════════
+    const MIN=60*1000, DAY=24*60*60*1000;
+    const LEARN_STEPS_MIN=[1, 10];   // minutes
+    const GRAD_INTERVAL_DAYS=1;
+    const EASY_INTERVAL_DAYS=4;
+
+    function applyGrade(card, grade, preview=false) {
+      const now=Date.now();
+      const wasReview = card.state==='review';
+      let c = preview ? {...card} : card;
+
+      if(c.state==='new' || c.state==='learning') {
+        if(grade===1) {
+          c.state='learning';
+          c.interval=LEARN_STEPS_MIN[0];
+          c.due=now + c.interval*MIN;
+        } else if(grade===2) {
+          c.state='learning';
+          c.interval=Math.max(LEARN_STEPS_MIN[0], 5);
+          c.due=now + c.interval*MIN;
+        } else if(grade===3) {
+          let i = LEARN_STEPS_MIN.indexOf(c.interval);
+          if(c.state==='new' || i<0) i=0;
+          if(i < LEARN_STEPS_MIN.length-1) {
+            c.state='learning';
+            c.interval=LEARN_STEPS_MIN[i+1];
+            c.due=now + c.interval*MIN;
+          } else {
+            c.state='review';
+            c.interval=GRAD_INTERVAL_DAYS;
+            c.due=now + c.interval*DAY;
+          }
+        } else if(grade===4) {
+          c.state='review';
+          c.interval=EASY_INTERVAL_DAYS;
+          c.due=now + c.interval*DAY;
+        }
+      } else { // review
+        const ease=c.ease||2.5;
+        if(grade===1) {
+          c.lapses += 1;
+          c.ease = Math.max(1.3, ease - 0.2);
+          c.state='learning';
+          c.interval=LEARN_STEPS_MIN[0];
+          c.due=now + c.interval*MIN;
+        } else if(grade===2) {
+          c.ease=Math.max(1.3, ease-0.15);
+          c.interval=Math.max(1, Math.round(c.interval*1.2));
+          c.due=now + c.interval*DAY;
+        } else if(grade===3) {
+          c.interval=Math.max(1, Math.round(c.interval*ease));
+          c.due=now + c.interval*DAY;
+        } else if(grade===4) {
+          c.ease=ease+0.15;
+          c.interval=Math.max(1, Math.round(c.interval*ease*1.3));
+          c.due=now + c.interval*DAY;
+        }
+      }
+      if(!preview) {
+        c.reps += 1;
+        c.lastReviewed = now;
+      }
+      return c;
+    }
+    function formatInterval(c) {
+      if(c.state==='learning' || c.state==='new') {
+        const m=c.interval;
+        if(m<60) return `${m}m`;
+        const h=Math.round(m/60); if(h<24) return `${h}h`;
+        return `${Math.round(h/24)}d`;
+      }
+      const d=c.interval;
+      if(d<30) return `${d}d`;
+      if(d<365) return `${Math.round(d/30)}mo`;
+      return `${(d/365).toFixed(1)}y`;
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Study session
+    // ════════════════════════════════════════════════════════════════════
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+    async function startStudy() {
+      if(!currentDeckId) return;
+      const cards = await getByIndex('cards','deck',currentDeckId);
+      const now = Date.now();
+      const learnDue  = cards.filter(c=>c.state==='learning' && c.due<=now);
+      const revDue    = shuffle(cards.filter(c=>c.state==='review'  && c.due<=now)).slice(0, settings.revLimit);
+      const newDue    = shuffle(cards.filter(c=>c.state==='new')).slice(0, settings.newLimit);
+      if(!learnDue.length && !revDue.length && !newDue.length) { toast('Nothing to study'); return; }
+
+      session.queue=[...learnDue, ...revDue, ...newDue];
+      session.idx=0; session.finished=0; session.current=null; session.shown=false;
+
+      const d=await get1('decks', currentDeckId);
+      document.getElementById('study-deck-title').textContent=d.name.toUpperCase();
+
+      await loadMediaForDeck(currentDeckId);
+      show('s-study');
+      nextCard();
+    }
+    function refreshSessionStats() {
+      const remaining = session.queue.slice(session.idx);
+      const nN = remaining.filter(c=>c.state==='new').length;
+      const nL = remaining.filter(c=>c.state==='learning').length;
+      const nD = remaining.filter(c=>c.state==='review').length;
+      document.getElementById('cnt-new').textContent=nN;
+      document.getElementById('cnt-learn').textContent=nL;
+      document.getElementById('cnt-due').textContent=nD;
+    }
+    function nextCard() {
+      if(session.idx >= session.queue.length) { sessionDone(); return; }
+      session.current=session.queue[session.idx];
+      session.shown=false;
+      const c=session.current;
+      const frontHtml=renderTemplate(c.front, c, false, '');
+      document.getElementById('card-face').innerHTML=`<div>${rewriteMedia(frontHtml)}</div>`;
+      document.getElementById('reveal-btn').classList.remove('hidden');
+      document.getElementById('answer-row').classList.add('hidden');
+      refreshSessionStats();
+    }
+    function reveal() {
+      const c=session.current; if(!c) return;
+      const frontHtml=renderTemplate(c.front, c, false, '');
+      const backHtml =renderTemplate(c.back,  c, true,  frontHtml);
+      document.getElementById('card-face').innerHTML=`<div>${rewriteMedia(backHtml)}</div>`;
+      document.getElementById('reveal-btn').classList.add('hidden');
+      document.getElementById('answer-row').classList.remove('hidden');
+      session.shown=true;
+      for(let g=1; g<=4; g++) {
+        const next=applyGrade(c, g, true);
+        document.getElementById('iv-'+g).textContent=formatInterval(next);
+      }
+    }
+    async function answer(grade) {
+      if(!session.shown) return;
+      const c=session.current; if(!c) return;
+      applyGrade(c, grade, false);
+      session.queue.splice(session.idx, 1);
+      if(c.state==='learning') {
+        // requeue for later in same session
+        const insertAt = Math.min(session.queue.length, session.idx + 5);
+        session.queue.splice(insertAt, 0, c);
+      } else {
+        session.finished += 1;
+      }
+      await put('cards', c);
+      nextCard();
+    }
+    function skipCard() {
+      if(session.idx >= session.queue.length) return;
+      const c=session.queue.splice(session.idx,1)[0];
+      session.queue.push(c);
+      nextCard();
+    }
+    function exitStudy() { freeMediaCache(); show('s-home'); }
+    function sessionDone() {
+      freeMediaCache();
+      document.getElementById('done-msg').textContent =
+        session.finished
+          ? `Reviewed ${session.finished} card${session.finished===1?'':'s'}. Come back when more are due.`
+          : 'Nothing to review this session.';
+      show('s-done');
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Export
+    // ════════════════════════════════════════════════════════════════════
+    async function exportProgress() {
+      if(!currentDeckId) return;
+      const d=await get1('decks', currentDeckId);
+      const cards = await getByIndex('cards','deck', currentDeckId);
+      const data = {
+        format:'learn.v1',
+        exportedAt: new Date().toISOString(),
+        deck: {id:d.id, name:d.name, createdAt:d.createdAt},
+        cards: cards.map(c=>({
+          ankiId:c.ankiId, state:c.state, due:c.due, interval:c.interval,
+          ease:c.ease, reps:c.reps, lapses:c.lapses, lastReviewed:c.lastReviewed
+        }))
+      };
+      downloadFile(JSON.stringify(data,null,2),
+                   `learn-${slug(d.name)}-${Date.now()}.json`, 'application/json');
+      toast('Progress exported','ok');
+    }
+    async function exportApkg() {
+      // Honest limitation: we don't keep the original SQLite, so we can't perfectly
+      // recreate an .apkg. We export the JSON progress instead, with a note.
+      toast('Exporting JSON — full .apkg round-trip not supported yet','');
+      await exportProgress();
+    }
+    function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'deck'; }
+    function downloadFile(content, filename, mime) {
+      const blob=new Blob([content], {type:mime});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Bulk data actions
+    // ════════════════════════════════════════════════════════════════════
+    async function resetAllProgress() {
+      if(!confirm('Reset scheduling for ALL decks back to new?')) return;
+      const all=await getAll('cards');
+      const now=Date.now();
+      for(const c of all) {
+        c.state='new'; c.due=now; c.interval=0; c.ease=2.5;
+        c.reps=0; c.lapses=0; c.lastReviewed=null;
+      }
+      await bulkPut('cards', all);
+      toast('Progress reset','ok');
+      show('s-home');
+    }
+    async function wipeAll() {
+      if(!confirm('Delete ALL decks and progress? This cannot be undone.')) return;
+      const decks=await getAll('decks');
+      for(const d of decks) {
+        await delByIndex('cards','deck',d.id);
+        await del1('decks',d.id);
+      }
+      const media=await getAll('media');
+      for(const m of media) await del1('media', m.key);
+      toast('All data cleared','ok');
+      show('s-home');
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Init
+    // ════════════════════════════════════════════════════════════════════
+    (async ()=>{
+      loadSettings();
+      await db();
+      await renderHome();
+    })();
+  </script>
+</body>
+</html>
