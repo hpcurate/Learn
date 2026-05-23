@@ -414,6 +414,44 @@
     });
 
     // ════════════════════════════════════════════════════════════════════
+    //  Minimal protobuf reader — extract top-level string fields from a blob.
+    //  Used to pull q_format (field 1) / a_format (field 2) from
+    //  TemplateConfig in the new Anki schema.
+    // ════════════════════════════════════════════════════════════════════
+    function _readVarint(bytes, pos) {
+      let val=0, shift=0;
+      while(pos < bytes.length && shift < 32) {
+        const b = bytes[pos++];
+        val |= (b & 0x7F) << shift;
+        if((b & 0x80) === 0) return [val >>> 0, pos];
+        shift += 7;
+      }
+      return [val >>> 0, pos];
+    }
+    function readProtoStrings(bytes) {
+      const out = {};
+      if(!bytes || !bytes.length) return out;
+      const td = new TextDecoder('utf-8', {fatal:false});
+      let pos = 0;
+      while(pos < bytes.length) {
+        const [tag, p1] = _readVarint(bytes, pos); pos = p1;
+        const wire = tag & 0x07;
+        const num  = tag >>> 3;
+        if(wire === 0) { const [, p2] = _readVarint(bytes, pos); pos = p2; }
+        else if(wire === 1) { pos += 8; }
+        else if(wire === 2) {
+          const [len, p2] = _readVarint(bytes, pos);
+          const sub = bytes.subarray(p2, p2 + len);
+          pos = p2 + len;
+          if(!(num in out)) out[num] = td.decode(sub);
+        }
+        else if(wire === 5) { pos += 4; }
+        else break;
+      }
+      return out;
+    }
+
+    // ════════════════════════════════════════════════════════════════════
     //  .apkg import
     // ════════════════════════════════════════════════════════════════════
     document.getElementById('file-input').addEventListener('change', e=>{
@@ -456,10 +494,42 @@
         }
         const adb=new SQL.Database(dbBuf);
 
-        const colRow=adb.exec("SELECT decks, models FROM col LIMIT 1")[0];
-        if(!colRow) throw new Error('Empty Anki collection');
-        const decksJson=JSON.parse(colRow.values[0][0]);
-        const modelsJson=JSON.parse(colRow.values[0][1]);
+        // Detect new schema (Anki 2.1.50+ / schema v18+): models & decks moved to
+        // dedicated tables, templates.config is protobuf-encoded.
+        const newSchema = adb.exec(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='notetypes'"
+        ).length > 0;
+
+        let decksJson, modelsJson;
+        if(newSchema) {
+          modelsJson = {};
+          const ntq = adb.exec("SELECT id, name FROM notetypes");
+          if(ntq[0]) for(const [id,name] of ntq[0].values) {
+            modelsJson[String(id)] = { id:String(id), name, flds:[], tmpls:[], type:0 };
+          }
+          const fq = adb.exec("SELECT ntid, ord, name FROM fields ORDER BY ntid, ord");
+          if(fq[0]) for(const [ntid, ord, name] of fq[0].values) {
+            const m = modelsJson[String(ntid)];
+            if(m) m.flds[ord] = { name };
+          }
+          const tq = adb.exec("SELECT ntid, ord, name, config FROM templates ORDER BY ntid, ord");
+          if(tq[0]) for(const [ntid, ord, name, config] of tq[0].values) {
+            const cfg = readProtoStrings(config);
+            const m = modelsJson[String(ntid)];
+            if(m) {
+              m.tmpls[ord] = { name, qfmt: cfg[1]||'', afmt: cfg[2]||'' };
+              if(cfg[1] && cfg[1].includes('{{cloze:')) m.type = 1;
+            }
+          }
+          decksJson = {};
+          const dq = adb.exec("SELECT id, name FROM decks");
+          if(dq[0]) for(const [id,name] of dq[0].values) decksJson[String(id)] = { name };
+        } else {
+          const colRow = adb.exec("SELECT decks, models FROM col LIMIT 1")[0];
+          if(!colRow) throw new Error('Empty Anki collection');
+          decksJson  = JSON.parse(colRow.values[0][0]||'{}');
+          modelsJson = JSON.parse(colRow.values[0][1]||'{}');
+        }
 
         // notes
         const notes={};
@@ -502,7 +572,7 @@
             deckId, ankiId: String(aid),
             front: tmpl.qfmt, back: tmpl.afmt,
             fields: note.flds,
-            fieldNames: (model.flds||[]).map(f=>f.name),
+            fieldNames: (model.flds||[]).map(f=>f?f.name:''),
             tags: note.tags.trim(),
             modelName: model.name||'',
             modelType: model.type||0,           // 0 = standard, 1 = cloze
